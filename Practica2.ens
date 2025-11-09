@@ -1,0 +1,438 @@
+
+TECLAT EQU 0B000h
+PANTALLA EQU 0A000h
+
+MAX_PUNTS1 EQU 3 ;Constants per veure si s'ha guanyat
+MAX_PUNTS2 EQU 15
+ORIGEN 100h;Començem a la posició 100h
+INICIO ini
+.PILA 100 ;Pila amb mida de 100 paraules
+.DATOS
+fila1 VALOR 0,0,0
+fila2 VALOR 0,0,0
+fila3 VALOR 0,0,0
+;Inicialitzem les altres constants previament definides
+;Pantalla d'inici
+text_splash_1 VALOR "  X | O | X |  "
+text_splash_3 VALOR "  O | X | O |  "
+text_splash_4 VALOR "  O | X | O |  "
+text_splash_5 VALOR "TRES EN RATLLA "
+text_splash_6 VALOR "Autors:        "
+text_splash_7 VALOR "				"
+text_splash_8 VALOR "		        "
+text_splash_9 VALOR "PRESS SPACE NOW"
+;graella
+graella_horitzontal VALOR "  COL 123         F 1            I 2            L 3        ";Total de 60 posicions
+taulell VALOR "   "
+;Coordenades previament definides
+coordenada_x VALOR 0
+coordenada_y VALOR 0
+;Textos per guiar al jugador
+text_tornjug12 VALOR " TORN JUGADOR 1 ESCRIU COL:"
+text_tornjug11 VALOR " TORN JUGADOR 1 ESCRIU FIL:"
+text_tornjug22 VALOR " TORN JUGADOR 2 ESCRIU COL:"
+text_tornjug21 VALOR " TORN JUGADOR 2 ESCRIU FIL:"
+;Textos de finalització
+text_win1 VALOR "CAMPIO JUGADOR1 "
+text_win2 VALOR "CAMPIO JUGADOR2 "
+text_empat VALOR " | Empat | "
+
+;________________________________
+;AVÍS: Aquesta solució NO ÉS LA OFICIAL I TAMPOC ÉS DEL TOT ÓPTIMA, HA SIGUT REALITZADA PER L'ESTUDIANT I NO PEL PROFESSORAT
+;La impressió de la pantalla inicial és purament estética (no compta nota dins de la pràctica) 
+;________________________________
+.CODIGO
+
+ini:
+;Començem netejant el teclat i la pantalla (per totes les execucions)
+MOVH R0, BYTEALTO DIRECCION Clean_pantalla_teclat
+MOVL R0, BYTEBAJO DIRECCION Clean_pantalla_teclat
+CALL R0
+;Imprimim la nostra pantalla inicial
+MOVH R0, BYTEALTO DIRECCION splash
+MOVL R0, BYTEBAJO DIRECCION splash
+CALL R0
+
+;Esperem a la tecla d'espai
+MOVH R0, BYTEALTO DIRECCION esperant_espai
+MOVL R0, BYTEBAJO DIRECCION esperant_espai
+CALL R0
+
+;Ara cal netejar tota la pantalla d'inici
+MOVH R0, BYTEALTO DIRECCION Clean_pantalla_teclat
+MOVL R0, BYTEBAJO DIRECCION Clean_pantalla_teclat
+CALL R0
+
+;Pintem el taulell
+MOVH R0, BYTEALTO DIRECCION Pintar_Tauler
+MOVL R0, BYTEBAJO DIRECCION Pintar_Tauler
+CALL R0
+
+;Primer, és el torn del jugador 1
+MOVH R0, BYTEALTO DIRECCION Tornjug1
+MOVL R0, BYTEBAJO DIRECCION Tornjug1
+CALL R0
+
+;Després, és el torn del jugador 2
+MOVH R0, BYTEALTO DIRECCION Tornjug2
+MOVL R0, BYTEBAJO DIRECCION Tornjug2
+CALL R0
+
+;________________________________
+;TO DO8: Completeu l'espai les funcions que es truquen aquí
+;________________________________
+
+;A partir d'aquesta funció determinem si algun dels dos jugadors ha fet tres en RATLLA
+;Com a mínim han d'haver passat 5 turns tal que es pugui determinar el guanyador 
+MOVH R0, BYTEALTO DIRECCION mentre_no_final
+MOVL R0, BYTEBAJO DIRECCION mentre_no_final
+CALL R0
+
+Clean_pantalla_teclat:
+;Guardem en un registre l’adreça base del dispositiu pantalla
+MOVH R0, BYTEALTO PANTALLA
+MOVL R0, BYTEBAJO PANTALLA
+;Posem 120 perque volem borrar tota la PANTALLA
+MOVH R1, 00h
+MOVL R1, 120
+ADD R0, R0, R1
+;Ens posicionem a la posició 120 de la pantalla
+MOVH R1, 00h
+MOVL R1, 11b
+; Màscara per netejar la pantalla:
+; Bit 0: Si est à a 1 es fa un reset de la pantalla 154 
+; Bit 1: Si est à a 1, pantalla on , sinó pantalla off.
+MOV [R0], R1
+;Reinicialitzem les variables per netejar el buffer del teclat
+XOR R0, R0, R0
+XOR R1, R1, R1
+;Això esta copiat del que se'ns donava al campus
+PUSH R1
+PUSH R2
+XOR R0,R0,R0
+MOVH R1,BYTEALTO TECLAT
+MOVL R1,BYTEBAJO TECLAT
+INC R1
+MOVH R2,00h
+MOVL R2,00000100b
+MOV [R1],R2
+POP R2
+POP R1
+RET
+
+splash:
+;Volem escriure a la PANTALLA
+MOVH R0, BYTEALTO PANTALLA
+MOVL R0, BYTEBAJO PANTALLA
+;Posem 120 perque volem escriure en tota la PANTALLA (15*9)
+MOVH R2, 00h
+MOVL R2, 120
+;Posem el text inicial
+MOVH R3, BYTEALTO DIRECCION text_splash_1
+MOVL R3, BYTEBAJO DIRECCION text_splash_1
+imprimir_titol:
+MOV R4, [R3] ;Movem el text que esta dins d'R3 a R4
+MOVH R4, 00000111b ;Establim el format de text a escribir
+MOV [R0], R4 ;Posem "T" a la primer iteració dins de la Pantalla
+INC R0 ;Incrementem la següent posició de pantalla
+INC R3 ;Ens movem a la seguent lletra que conté el vector
+DEC R2 ;Decrementem el comptador
+BRNZ imprimir_titol ;Quan s'hagin fet 120 iteracions, que hauran cobert tota la pantalla, llavors hem acabat
+RET
+
+consulta_estat_teclat:
+MOVH R0, BYTEALTO TECLAT
+MOVL R0, BYTEBAJO TECLAT
+
+INC R0;Accedim al registre de control
+;D'aquesta manera sabem si s'ha pres una tecla amb aquetsa màscara
+MOVH R1, 00000001b
+MOVL R1, 04h
+consulta_estat:
+;Es posa el codi ASCII del caràcter
+MOV R2, [R0]
+;I es compara amb la màscara del codi ASCII, funciona només si hi ha un caràcter ASCII
+COMP R2, R1
+BRNZ consulta_estat
+RET
+
+esperant_espai:
+MOVH R0, BYTEALTO DIRECCION consulta_estat_teclat
+MOVL R0, BYTEBAJO DIRECCION consulta_estat_teclat
+CALL R0
+;Si s'ha arribat aqui, llavors s'ha apretat una tecla
+MOVH R0, BYTEALTO TECLAT
+MOVL R0, BYTEBAJO TECLAT
+MOV R1, [R0]
+;El que hi ha dins del teclat té el codi ascii de l'espai
+MOVH R2, 32h
+MOVL R2, 20h
+;He fet cas a la graella diapo 45, on el codi ASCII de " " es 3220h
+COMP R1, R2
+BRNZ esperant_espai
+RET
+
+Pintar_Tauler:
+MOVH R0, BYTEALTO PANTALLA
+MOVL R0, BYTEBAJO PANTALLA
+;________________________________
+;TO DO1: Imprimiu el taulell prenent com a refèrencia la impressió de la pantalla inicial
+;________________________________
+RET
+
+Tornjug1:
+;________________________________
+;TO DO2: Imprimiu el vector: text_tornjug11 VALOR " TORN JUGADOR 1 ESCRIU FIL:"
+;________________________________
+
+;Fem una crida al procediment que consulta l'estat del teclat 
+fila_valida:
+MOVH R0, BYTEALTO DIRECCION consulta_estat_teclat
+MOVL R0, BYTEBAJO DIRECCION consulta_estat_teclat
+CALL R0
+MOVH R0, BYTEALTO TECLAT;Llavors, ha introduit una tecla al teclat però no sabem quina
+MOVL R0, BYTEBAJO TECLAT
+;Llegim el caràcter que hi ha al buffer
+MOV R1, [R0];VOLEM COMPARAR AMB EL CODI ASCII de l'1, 2, 3, equivalent a posar el codi ascii de l'1' a la part baixa
+;Borrem la part alta perquè no ens interessa el color
+MOVH R1, 00h;Borrem la part alta perquè no ens interessa el color
+;Ara només cal fer el mateix procediment per les columnes, es repeteix tot el que hi ha a les files
+;________________________________
+;TO DO3: A partir del que s'ha fet en les linies més anteriors del codi detecteu si la tecla és vàlida 
+;________________________________
+
+;Ara només cal fer el mateix procediment per les columnes, es repeteix tot el que hi ha a les files
+;________________________________
+;TO DO4: Imprimiu el vector: text_tornjug12 VALOR " TORN JUGADOR 1 ESCRIU COL:"
+;________________________________
+
+columna_valida: 
+;________________________________
+;TO DO5: A partir del que s'ha fet en les linies més anteriors del codi detecteu si la tecla és vàlida (Al igual que les files)
+;________________________________
+
+is_repe2:
+MOV R3, R0;Guardo el caràcter '1', '2' o '3' en l'adreça registre R3 (Columna)
+MOV R2, R6;Obtenim els codis ASCII dels números introduits (Fila) (Iaxò és per pura comoditat)
+XOR R0, R0, R0 ;Inicialtzo R0 a 0
+XOR R4, R4, R4 ;Inicialtzo R4 a 0
+MOVL R4, 30h
+;R2 fila;R3 Columna
+SUB R2, R2, R4;Obtenim el número '1', '2' o '3' que ha introduit l'usuari en hexadecimal al registre
+SUB R3, R3, R4;Obtenim el número '1', '2' o '3' que ha introduit l'usuari en hexadecimal al registre
+;Miro totes les files, i després per la fila indicada miro la columna incrementant la posició de la fila
+MOVH R6, BYTEALTO DIRECCION fila1
+MOVL R6, BYTEBAJO DIRECCION fila1
+
+MOVL R4, 01h
+COMP R2, R4
+BRZ mirar_columna_j1
+
+MOVH R6, BYTEALTO DIRECCION fila2
+MOVL R6, BYTEBAJO DIRECCION fila2
+
+MOVL R4, 02h
+COMP R2, R4
+BRZ mirar_columna_j1
+
+MOVH R6, BYTEALTO DIRECCION fila3
+MOVL R6, BYTEBAJO DIRECCION fila3
+
+MOVL R4, 03h
+COMP R2, R4
+BRZ mirar_columna_j1
+;________________________________
+;TO DO6: Feu la funció mirar_columna_j1, on heu de detectar si la casella introduida ha estat repetida o no
+;________________________________
+
+ok:
+;Necesitem l'index de fila i de columna;R2 fila;R3 Columna
+;Segons la pràctica s'ens diu que s'ha d'emmagatzemar un 1 si el jugador 1 ha introduit la casella
+MOVH R5, 00h
+MOVL R5, 01h
+;No fa falta calcular on s'ha de posar aquest 1, ja ho hem fet abans amb els condicionals
+MOV [R6], R5
+;Recuperem la informació emmagatzemada anteriorment
+;Impressió de la x
+dibuixar_x:
+MOVH R5, 00h
+MOVL R5, 50 ;A partir del número 50 (3*15 + 5)determinem on s'ha d'escriure al teclat (Prova/error)
+
+MOVH R0, 00h
+MOVL R0, 00h
+MOVL R1, 15 ;Calculem si hi ha més desplaçaments de columna (pels números 1/2/3) amb la funció mul
+
+mul:
+ADD R0 , R0, R1
+DEC R2
+BRNZ mul
+;________________________________
+;TO DO6: Calculeu el desplaçament de files i columnes i feu la impressió de x on correspon
+;________________________________
+
+
+RET
+;________________________________
+;TO DO 7:Prenent com a refèrencia el torn del jugador 1, feu la funció jug2
+;________________________________
+
+;________________________________
+;Quasi tots les comprovacions seguixen la mateixa estructura
+;________________________________
+tres_en_ratlla:
+;OBJECTIU:COMPROVAR TOTS ELS POSSIBLES TRES EN RATLLA EN COLUMNES
+MOVH R0, BYTEALTO DIRECCION fila1
+MOVL R0, BYTEBAJO DIRECCION fila1
+
+MOVH R1, BYTEALTO DIRECCION fila2
+MOVL R1, BYTEBAJO DIRECCION fila2
+
+MOVH R2, BYTEALTO DIRECCION fila3
+MOVL R2, BYTEBAJO DIRECCION fila3
+
+XOR R4, R4, R4
+MOVL R4, 03h ;Vegades que s'ha de fer el bucle
+bucle_guanya_en_columnes:
+MOVH R3,BYTEALTO MAX_PUNTS2
+MOVL R3,BYTEBAJO MAX_PUNTS2
+PUSH R3;Segon valor a la pila FIFO
+
+MOVH R3,BYTEALTO MAX_PUNTS1
+MOVL R3,BYTEBAJO MAX_PUNTS1
+PUSH R3;Tercer valor a la pila FIFO
+
+XOR R3, R3, R3;0
+XOR R5, R5, R5;0
+;A partir d'aqui R6 és un registre auxiliar
+MOV R6, [R0]
+MOV R3, [R1]
+;Primera suma
+ADD R5, R6, R3
+
+MOV R6, [R2]
+;Segona suma
+ADD R5, R5, R6
+
+POP R6;Treiem el tercer valor
+COMP R5, R6
+BRZ win_jug_1
+
+POP R6;Treiem el segon valor
+COMP R5, R6
+BRZ win_jug_2
+;Paseem a la següent columna
+INC R0
+INC R1
+INC R2
+DEC R4
+BRNZ bucle_guanya_en_columnes
+
+MOVH R0, BYTEALTO DIRECCION fila1
+MOVL R0, BYTEBAJO DIRECCION fila1
+
+MOVH R1, BYTEALTO DIRECCION fila2
+MOVL R1, BYTEBAJO DIRECCION fila2
+INC R1
+
+MOVH R2, BYTEALTO DIRECCION fila3
+MOVL R2, BYTEBAJO DIRECCION fila3
+INC R2
+INC R2 
+
+XOR R4, R4, R4
+MOVL R4, 02h ;Vegades que s'ha de fer el bucle
+;________________________________
+;TO DO9:Prenent com a refèrencia el que es fa desde la linia 327, implementeu un bucle on es miri si el jugador ha guanyat en diagonal
+;________________________________
+;________________________________
+;TO DO10: Implementeu un bucle on es miri si el jugador ha guanyat per files 
+;________________________________
+
+
+RET
+;___________________________________
+;A partir d'aqui poso totes les possibiltats de prints
+;Enganyo a l'assemblador amb la intrsucció jmp final i seguidament RET
+;___________________________________
+win_jug_1:
+MOVH R0, BYTEALTO DIRECCION Clean_pantalla_teclat
+MOVL R0, BYTEBAJO DIRECCION Clean_pantalla_teclat
+CALL R0
+;________________________________
+;TO DO12: Implementeu la impressió de guanyador del jugador1
+;________________________________
+MOVH R0, BYTEALTO DIRECCION final
+MOVL R0, BYTEBAJO DIRECCION final
+CALL final
+RET
+win_jug_2:
+MOVH R0, BYTEALTO DIRECCION Clean_pantalla_teclat
+MOVL R0, BYTEBAJO DIRECCION Clean_pantalla_teclat
+CALL R0
+
+;________________________________
+;TO DO13: Implementeu la impressió de guanyador del jugador2
+;________________________________
+
+MOVH R0, BYTEALTO DIRECCION final
+MOVL R0, BYTEBAJO DIRECCION final
+CALL final
+
+RET
+
+empat:
+MOVH R0, BYTEALTO DIRECCION Clean_pantalla_teclat
+MOVL R0, BYTEBAJO DIRECCION Clean_pantalla_teclat
+CALL R0
+;________________________________
+;TO DO14: Implementeu la impressió en cas d'empat
+;________________________________
+MOVH R0, BYTEALTO DIRECCION final
+MOVL R0, BYTEBAJO DIRECCION final
+CALL final
+RET
+
+mentre_no_final:
+XOR R5, R5, R5
+MOVL R5, 02h
+mini_bucle:
+PUSH R5;S'ha de fer aqui el push perquè sino no es modifica el valor emmagatzemat a la pila
+MOVH R0, BYTEALTO DIRECCION Tornjug1
+MOVL R0, BYTEBAJO DIRECCION Tornjug1
+CALL R0
+
+MOVH R0, BYTEALTO DIRECCION tres_en_ratlla
+MOVL R0, BYTEBAJO DIRECCION tres_en_ratlla
+CALL R0
+
+MOVH R0, BYTEALTO DIRECCION Tornjug2
+MOVL R0, BYTEBAJO DIRECCION Tornjug2
+CALL R0
+
+MOVH R0, BYTEALTO DIRECCION tres_en_ratlla
+MOVL R0, BYTEBAJO DIRECCION tres_en_ratlla
+CALL R0
+
+POP R5;Es treu l'únic element que queda a la pila FIFO
+DEC R5
+BRNZ mini_bucle
+
+;________________________________
+;TO DO15: Completeu la part de codi que falta
+;________________________________
+final:
+FIN
+
+;________________________________
+;TO DO17: Implementeu la forma d'entrar els noms del jugadors   (no fet a la pràctica original)
+;________________________________
+
+;________________________________
+;TO DO18: Implementeu al forma de tornar a repetir el joc (no fet a la pràctica original)
+;________________________________
+
+
+
+
+
+
